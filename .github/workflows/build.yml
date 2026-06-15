@@ -18,11 +18,8 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore
-        run: dotnet restore md2loop/md2loop.csproj
-
       - name: Build
-        run: dotnet build md2loop/md2loop.csproj -c Release --no-restore
+        run: dotnet build md2loop/md2loop.csproj -c Release -r win-x64
 
       - name: Publish (x64)
         run: |
