@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="md2loop.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:md2loop"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Loaded="Page_Loaded">
+
+    <Grid Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Clipboard status -->
+        <StackPanel Grid.Row="0" Spacing="6" HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <FontIcon Glyph="&#xE16F;" FontSize="16" Opacity="0.6" />
+                <TextBlock x:Name="ClipboardLengthText" Text="Empty" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                <FontIcon x:Name="ModeIcon" Glyph="&#xE9CE;" FontSize="14" Opacity="0.6" />
+                <TextBlock x:Name="ModeText" Text="Unrecognized format"
+                           FontSize="13" Opacity="0.7" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Convert button -->
+        <Button x:Name="ConvertButton" Grid.Row="1"
+                Style="{StaticResource AccentButtonStyle}"
+                HorizontalAlignment="Stretch"
+                Height="40"
+                Click="ConvertButton_Click"
+                IsEnabled="False">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <FontIcon x:Name="ConvertIcon" Glyph="&#xE72A;" FontSize="14" />
+                <TextBlock x:Name="ConvertText" Text="Convert" />
+                <TextBlock Text="Ctrl+Enter" Opacity="0.6" FontSize="12"
+                           VerticalAlignment="Center" Margin="12,0,0,0" />
+            </StackPanel>
+        </Button>
+
+        <!-- Feedback -->
+        <StackPanel x:Name="FeedbackPanel" Grid.Row="2"
+                    Orientation="Horizontal" Spacing="6"
+                    HorizontalAlignment="Center"
+                    Visibility="Collapsed">
+            <FontIcon x:Name="FeedbackIcon" Glyph="&#xE73E;" FontSize="14"
+                      Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
+            <TextBlock x:Name="FeedbackText" FontSize="13"
+                       Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
+        </StackPanel>
+    </Grid>
+</Page>

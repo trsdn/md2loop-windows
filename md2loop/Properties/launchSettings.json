@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "md2loop (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "md2loop (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
