@@ -44,12 +44,13 @@ Windows port of [md2loop](https://github.com/trsdn/md2loop) (originally macOS/Sw
 
 Grab the latest release from the [Releases page](https://github.com/trsdn/md2loop-windows/releases):
 
-| File | Architecture |
+| File | Description |
 |------|-------------|
-| `md2loop-win-x64.zip` | Intel/AMD 64-bit |
-| `md2loop-win-arm64.zip` | ARM64 (Surface Pro, Snapdragon) |
+| `md2loop-setup-x.y.z.exe` | **Installer** — with Start Menu, Desktop shortcut, optional autostart |
+| `md2loop-win-x64.zip` | Portable ZIP (Intel/AMD 64-bit) |
+| `md2loop-win-arm64.zip` | Portable ZIP (ARM64 — Surface Pro, Snapdragon) |
 
-Extract the ZIP and run `md2loop.exe` — no installer needed, fully self-contained.
+The installer handles everything — just run it. No .NET runtime needed.
 
 ### Build from source
 
