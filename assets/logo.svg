@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#1a1a2e"/>
+  <circle cx="256" cy="256" r="230" fill="#16213e"/>
+  
+  <!-- Markdown "M" symbol on left -->
+  <rect x="100" y="180" width="130" height="152" rx="12" fill="#e94560"/>
+  <path d="M120 300V212l25 35 25-35v88" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M190 280l15 20 15-20" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Loop "L" symbol on right -->
+  <rect x="282" y="180" width="130" height="152" rx="12" fill="#6c63ff"/>
+  <path d="M310 212v70h40" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="370" cy="256" r="22" stroke="white" stroke-width="6" fill="none"/>
+  <path d="M370 234v-5" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  
+  <!-- Bidirectional arrows in center -->
+  <path d="M242 240l-8-8 8-8" stroke="#0f3460" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M270 272l8 8-8 8" stroke="#0f3460" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="234" y1="232" x2="278" y2="232" stroke="#0f3460" stroke-width="5" stroke-linecap="round"/>
+  <line x1="234" y1="280" x2="278" y2="280" stroke="#0f3460" stroke-width="5" stroke-linecap="round"/>
+  
+  <!-- Bottom text -->
+  <text x="256" y="380" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="36" font-weight="bold" fill="white" letter-spacing="2">md2loop</text>
+</svg>
