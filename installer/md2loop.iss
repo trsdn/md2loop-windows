@@ -2,7 +2,20 @@
 ; Builds a modern Windows installer with Start Menu, Desktop shortcut, and uninstaller
 
 #define MyAppName "md2loop"
-#define MyAppVersion "1.0.0"
+#ifndef MyAppVersion
+#define MyAppVersion "0.0.0"
+#endif
+
+#ifdef MyAppArm64
+#define MyAppRid "win-arm64"
+#define MyAppArchitecturesAllowed "arm64"
+#define MyAppArchitecturesInstallIn64BitMode "arm64"
+#else
+#define MyAppRid "win-x64"
+#define MyAppArchitecturesAllowed "x64compatible and not arm64"
+#define MyAppArchitecturesInstallIn64BitMode "x64compatible"
+#endif
+
 #define MyAppPublisher "trsdn"
 #define MyAppURL "https://github.com/trsdn/md2loop-windows"
 #define MyAppExeName "md2loop.exe"
@@ -16,12 +29,13 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases
+VersionInfoVersion={#MyAppVersion}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 LicenseFile=..\LICENSE
 OutputDir=..\dist
-OutputBaseFilename=md2loop-setup-{#MyAppVersion}
+OutputBaseFilename=md2loop-setup-{#MyAppVersion}-{#MyAppRid}
 SetupIconFile=..\assets\logo.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -29,7 +43,8 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 UninstallDisplayIcon={app}\{#MyAppExeName}
-ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed={#MyAppArchitecturesAllowed}
+ArchitecturesInstallIn64BitMode={#MyAppArchitecturesInstallIn64BitMode}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

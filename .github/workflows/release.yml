@@ -39,10 +39,12 @@ jobs:
 
       - name: Publish self-contained
         run: |
+          $version = "${{ steps.version.outputs.VERSION }}"
           dotnet publish md2loop/md2loop.csproj `
             -c Release `
             -r ${{ matrix.rid }} `
             --self-contained true `
+            -p:Version=$version `
             -p:PublishSingleFile=true `
             -p:PublishTrimmed=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
@@ -50,9 +52,18 @@ jobs:
 
       - name: Build installer
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
-            /DMyAppVersion=${{ steps.version.outputs.VERSION }} `
-            installer/md2loop.iss
+          $installerArgs = @(
+            "/DMyAppVersion=${{ steps.version.outputs.VERSION }}"
+          )
+          if ("${{ matrix.rid }}" -eq "win-arm64") {
+            $installerArgs += "/DMyAppArm64"
+          }
+          $installerArgs += "installer/md2loop.iss"
+
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" @installerArgs
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
 
       - name: Create portable ZIP
         run: |

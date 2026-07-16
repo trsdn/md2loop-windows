@@ -21,20 +21,13 @@
 
 Windows port of [md2loop](https://github.com/trsdn/md2loop) (originally macOS/Swift).
 
-## Screenshots
-
-<p align="center">
-  <img src="assets/screenshot-markdown.png" width="340" alt="Markdown detected">
-  &nbsp;&nbsp;
-  <img src="assets/screenshot-empty.png" width="340" alt="Empty state">
-</p>
-
 ## Features
 
-- **Markdown → Loop** — Converts clipboard Markdown to optimized HTML for pasting into Loop
-- **Loop → Markdown** — Converts Loop's rich text back to clean Markdown
-- **Auto-detection** — Automatically detects content type (Markdown vs HTML)
-- **One shortcut** — `Ctrl+Enter` does the right thing based on content
+- **Markdown → Rich Text** — Converts clipboard Markdown or plain text to optimized HTML for pasting into Loop
+- **Rich Text → Markdown** — Converts HTML or RTF from Loop, Office, and other apps back to clean Markdown
+- **Smarter auto-detection** — Distinguishes semantic rich text from syntax-colored Markdown copies
+- **Manual output controls** — Always choose **Rich Text** or **Markdown** yourself
+- **One shortcut** — `Ctrl+Enter` uses the detected direction
 - **Full Markdown support** — Headings, bold/italic, lists, tables, code blocks, task lists, links, blockquotes
 - **Native Windows app** — WinUI 3, Mica backdrop, dark mode
 
@@ -46,7 +39,8 @@ Grab the latest release from the [Releases page](https://github.com/trsdn/md2loo
 
 | File | Description |
 |------|-------------|
-| `md2loop-setup-x.y.z.exe` | **Installer** — with Start Menu, Desktop shortcut, optional autostart |
+| `md2loop-setup-x.y.z-win-x64.exe` | **Installer** — Intel/AMD 64-bit |
+| `md2loop-setup-x.y.z-win-arm64.exe` | **Installer** — ARM64 (Surface Pro, Snapdragon) |
 | `md2loop-win-x64.zip` | Portable ZIP (Intel/AMD 64-bit) |
 | `md2loop-win-arm64.zip` | Portable ZIP (ARM64 — Surface Pro, Snapdragon) |
 
@@ -70,21 +64,22 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 ## Usage
 
 1. Copy Markdown text to your clipboard
-2. Open md2loop — it auto-detects the content type
-3. Click **Convert to Loop** (or press `Ctrl+Enter`)
+2. Open md2loop — it recommends a conversion direction
+3. Click **Rich Text** to format the clipboard for Loop, or press `Ctrl+Enter`
 4. Paste into Microsoft Loop (`Ctrl+V`)
 
-Works the other way too — copy rich text from Loop, convert to Markdown.
+Works the other way too — copy rich text from Loop or Office and click **Markdown**. The two buttons remain available even when you want to override auto-detection.
 
 ## How it works
 
 | Component | Purpose |
 |-----------|---------|
-| `ClipboardContentDetector.cs` | Regex-based detection of Markdown vs HTML |
-| `ClipboardManager.cs` | Windows clipboard read/write (HTML + text formats) |
+| `ClipboardContentDetector.cs` | Scored detection of Markdown/plain text vs HTML/RTF |
+| `ClipboardManager.cs` | Reads HTML, RTF, and text; writes HTML and text clipboard formats |
 | `LoopHtmlConverter.cs` | Markdown → Loop-optimized HTML via [Markdig](https://github.com/xoofx/markdig) |
 | `HtmlToMarkdownConverter.cs` | HTML → Markdown via [HtmlAgilityPack](https://html-agility-pack.net/) |
-| `MainPage.xaml(.cs)` | WinUI 3 UI with clipboard polling + Ctrl+Enter shortcut |
+| `RtfToMarkdownConverter.cs` | RTF → HTML → Markdown via [RtfPipe](https://github.com/erdomke/RtfPipe) |
+| `MainPage.xaml(.cs)` | WinUI 3 UI with explicit output buttons + Ctrl+Enter shortcut |
 
 ### Loop-specific optimizations
 

@@ -12,7 +12,7 @@ public sealed partial class MainWindow : Window
         SetTitleBar(AppTitleBar);
 
         AppWindow.SetIcon("Assets/AppIcon.ico");
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(320, 240));
+        AppWindow.Resize(new Windows.Graphics.SizeInt32(360, 280));
 
         RootFrame.Navigate(typeof(MainPage));
     }

@@ -7,9 +7,10 @@
     xmlns:local="using:md2loop"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Loaded="Page_Loaded">
+    Loaded="Page_Loaded"
+    Unloaded="Page_Unloaded">
 
-    <Grid Padding="24" RowSpacing="16">
+    <Grid Padding="24" RowSpacing="14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -24,25 +25,59 @@
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                 <FontIcon x:Name="ModeIcon" Glyph="&#xE9CE;" FontSize="14" Opacity="0.6" />
-                <TextBlock x:Name="ModeText" Text="Unrecognized format"
+                <TextBlock x:Name="ModeText" Text="No convertible content"
                            FontSize="13" Opacity="0.7" />
             </StackPanel>
         </StackPanel>
 
-        <!-- Convert button -->
-        <Button x:Name="ConvertButton" Grid.Row="1"
-                Style="{StaticResource AccentButtonStyle}"
-                HorizontalAlignment="Stretch"
-                Height="40"
-                Click="ConvertButton_Click"
-                IsEnabled="False">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <FontIcon x:Name="ConvertIcon" Glyph="&#xE72A;" FontSize="14" />
-                <TextBlock x:Name="ConvertText" Text="Convert" />
-                <TextBlock Text="Ctrl+Enter" Opacity="0.6" FontSize="12"
-                           VerticalAlignment="Center" Margin="12,0,0,0" />
-            </StackPanel>
-        </Button>
+        <!-- Explicit output selection -->
+        <StackPanel Grid.Row="1" Spacing="8">
+            <TextBlock Text="Choose output format"
+                       FontSize="13"
+                       Opacity="0.7"
+                       HorizontalAlignment="Center" />
+
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="RichTextButton"
+                        Grid.Column="0"
+                        Height="40"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Click="RichTextButton_Click"
+                        IsEnabled="False"
+                        ToolTipService.ToolTip="Treat clipboard text as Markdown and copy formatted rich text.">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE72A;" FontSize="14" />
+                        <TextBlock Text="Rich Text" />
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="MarkdownButton"
+                        Grid.Column="1"
+                        Height="40"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Click="MarkdownButton_Click"
+                        IsEnabled="False"
+                        ToolTipService.ToolTip="Read HTML or RTF from the clipboard and copy Markdown.">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE72B;" FontSize="14" />
+                        <TextBlock Text="Markdown" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <TextBlock x:Name="ShortcutText"
+                       Text="Ctrl+Enter uses the detected format"
+                       FontSize="12"
+                       Opacity="0.6"
+                       HorizontalAlignment="Center" />
+        </StackPanel>
 
         <!-- Feedback -->
         <StackPanel x:Name="FeedbackPanel" Grid.Row="2"

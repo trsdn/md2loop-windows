@@ -56,6 +56,12 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools.WinApp" Version="0.3.2" />
     <PackageReference Include="Markdig" Version="0.38.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
+    <PackageReference Include="RtfPipe" Version="2.0.7677.4303" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <TrimmerRootAssembly Include="RtfPipe" RootMode="All" />
   </ItemGroup>
 
   <!--

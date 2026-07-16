@@ -7,25 +7,32 @@ namespace md2loop;
 /// </summary>
 public static class ClipboardManager
 {
-    public static async Task<(string? Text, string? Html)> ReadAsync()
+    public static async Task<(string? Text, string? Html, string? Rtf)> ReadAsync()
     {
         var content = Clipboard.GetContent();
         string? text = null;
         string? html = null;
-
-        if (content.Contains(StandardDataFormats.Html))
-        {
-            html = await content.GetHtmlFormatAsync();
-            // Windows HTML clipboard format includes headers — extract just the HTML fragment
-            html = ExtractHtmlFragment(html);
-        }
+        string? rtf = null;
 
         if (content.Contains(StandardDataFormats.Text))
         {
             text = await content.GetTextAsync();
         }
 
-        return (text, html);
+        if (content.Contains(StandardDataFormats.Html))
+        {
+            var clipboardHtml = await content.GetHtmlFormatAsync();
+            html = HtmlFormatHelper.GetStaticFragment(clipboardHtml);
+            if (string.IsNullOrWhiteSpace(html))
+                html = clipboardHtml;
+        }
+
+        if (content.Contains(StandardDataFormats.Rtf))
+        {
+            rtf = await content.GetRtfAsync();
+        }
+
+        return (text, html, rtf);
     }
 
     /// <summary>
@@ -51,26 +58,4 @@ public static class ClipboardManager
         Clipboard.Flush();
     }
 
-    /// <summary>
-    /// Extract HTML fragment from Windows clipboard HTML format (which includes headers).
-    /// </summary>
-    private static string ExtractHtmlFragment(string? clipboardHtml)
-    {
-        if (string.IsNullOrEmpty(clipboardHtml))
-            return string.Empty;
-
-        // Windows CF_HTML format has StartFragment/EndFragment markers
-        const string startMarker = "<!--StartFragment-->";
-        const string endMarker = "<!--EndFragment-->";
-
-        var startIdx = clipboardHtml.IndexOf(startMarker, StringComparison.Ordinal);
-        var endIdx = clipboardHtml.IndexOf(endMarker, StringComparison.Ordinal);
-
-        if (startIdx >= 0 && endIdx > startIdx)
-        {
-            return clipboardHtml[(startIdx + startMarker.Length)..endIdx].Trim();
-        }
-
-        return clipboardHtml;
-    }
 }
