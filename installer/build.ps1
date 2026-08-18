@@ -34,6 +34,7 @@ dotnet publish "$root\md2loop\md2loop.csproj" `
     -c Release `
     -r "win-$Architecture" `
     --self-contained true `
+    -p:Version=$Version `
     -p:PublishSingleFile=true `
     -p:PublishTrimmed=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
@@ -49,15 +50,26 @@ $iscc = "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
 if (-not (Test-Path $iscc)) {
     $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
 }
+$installerPath = $null
 if (-not (Test-Path $iscc)) {
     Write-Host "⚠️  Inno Setup not found. Skipping installer, creating ZIP only." -ForegroundColor Yellow
 } else {
     Write-Host "🏗️  Building installer..." -ForegroundColor Yellow
-    & $iscc "/DMyAppVersion=$Version" "$root\installer\md2loop.iss"
+
+    # The .iss defaults to win-x64; ARM64 builds must opt in so the installer is
+    # named correctly and refuses to install on the wrong architecture.
+    $isccArgs = @("/DMyAppVersion=$Version")
+    if ($Architecture -eq "arm64") {
+        $isccArgs += "/DMyAppArm64"
+    }
+    $isccArgs += "$root\installer\md2loop.iss"
+
+    & $iscc @isccArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Installer build failed!" -ForegroundColor Red
         exit 1
     }
+    $installerPath = "$distDir\md2loop-setup-$Version-win-$Architecture.exe"
 }
 
 # Also create portable ZIP
@@ -65,5 +77,7 @@ $zipPath = "$distDir\md2loop-win-$Architecture-v$Version.zip"
 Compress-Archive -Path "$publishDir\*" -DestinationPath $zipPath
 Write-Host ""
 Write-Host "✅ Build complete!" -ForegroundColor Green
-Write-Host "   Installer: $distDir\md2loop-setup-$Version.exe" -ForegroundColor White
+if ($installerPath) {
+    Write-Host "   Installer: $installerPath" -ForegroundColor White
+}
 Write-Host "   Portable:  $zipPath" -ForegroundColor White
