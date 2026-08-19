@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Windows.ApplicationModel.DataTransfer;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -11,9 +12,9 @@ public sealed partial class MainPage : Page
     private string? _clipboardText;
     private string? _clipboardHtml;
     private string? _clipboardRtf;
-    private DispatcherTimer? _timer;
     private DispatcherTimer? _feedbackTimer;
-    private bool _isPolling;
+    private bool _isReading;
+    private bool _isSubscribed;
 
     public MainPage()
     {
@@ -34,33 +35,60 @@ public sealed partial class MainPage : Page
 
     private void Page_Loaded(object sender, RoutedEventArgs e)
     {
-        if (_timer is not null)
-            return;
+        if (!_isSubscribed)
+        {
+            Clipboard.ContentChanged += OnClipboardContentChanged;
+            _isSubscribed = true;
+        }
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _timer.Tick += async (_, _) => await PollClipboardAsync();
-        _timer.Start();
-
-        _ = PollClipboardAsync();
+        _ = RefreshAsync();
     }
 
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
-        _timer?.Stop();
-        _timer = null;
+        if (_isSubscribed)
+        {
+            Clipboard.ContentChanged -= OnClipboardContentChanged;
+            _isSubscribed = false;
+        }
+
         _feedbackTimer?.Stop();
         _feedbackTimer = null;
     }
 
-    private async Task PollClipboardAsync()
+    /// <summary>
+    /// Re-reads the clipboard when the window is activated. ContentChanged is not
+    /// always delivered to a desktop app that is not in the foreground, so this
+    /// covers changes made while another app had focus.
+    /// </summary>
+    public void OnWindowActivated() => _ = RefreshAsync();
+
+    private void OnClipboardContentChanged(object? sender, object e)
     {
-        if (_isPolling)
+        // The event does not necessarily arrive on the UI thread.
+        DispatcherQueue.TryEnqueue(() => _ = RefreshAsync());
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (_isReading)
             return;
 
-        _isPolling = true;
+        _isReading = true;
         try
         {
-            var (text, html, rtf) = await ClipboardManager.ReadAsync();
+            var snapshot = await ClipboardManager.ReadAsync();
+
+            if (snapshot.IsExcluded)
+            {
+                ShowClipboardExcluded();
+                return;
+            }
+
+            var text = snapshot.Text;
+            var html = snapshot.Html;
+            var rtf = snapshot.Rtf;
+
             _clipboardText = text;
             _clipboardHtml = html;
             _clipboardRtf = rtf;
@@ -106,23 +134,40 @@ public sealed partial class MainPage : Page
         }
         finally
         {
-            _isPolling = false;
+            _isReading = false;
         }
     }
 
     private void ShowClipboardUnavailable()
     {
-        _currentMode = ClipboardMode.Unknown;
-        _clipboardText = null;
-        _clipboardHtml = null;
-        _clipboardRtf = null;
+        ResetClipboardState();
         ClipboardLengthText.Text = "Unavailable";
         ModeIcon.Glyph = "\uE7BA";
         ModeIcon.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
         ModeText.Text = "Clipboard is temporarily busy";
-        ShortcutText.Text = "Will retry automatically";
+        ShortcutText.Text = "Copy again or reactivate the window";
         RichTextButton.IsEnabled = false;
         MarkdownButton.IsEnabled = false;
+    }
+
+    private void ShowClipboardExcluded()
+    {
+        ResetClipboardState();
+        ClipboardLengthText.Text = "Private";
+        ModeIcon.Glyph = "\uE72E"; // Lock
+        ModeIcon.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
+        ModeText.Text = "Content is marked private";
+        ShortcutText.Text = "This content was not read";
+        RichTextButton.IsEnabled = false;
+        MarkdownButton.IsEnabled = false;
+    }
+
+    private void ResetClipboardState()
+    {
+        _currentMode = ClipboardMode.Unknown;
+        _clipboardText = null;
+        _clipboardHtml = null;
+        _clipboardRtf = null;
     }
 
     private void RichTextButton_Click(object sender, RoutedEventArgs e) => ConvertToRichText();
