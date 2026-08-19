@@ -183,7 +183,7 @@ public static partial class HtmlToMarkdownConverter
     private static void ConvertListItem(HtmlNode li, StringBuilder sb, int listDepth, ref int orderedIndex, bool ordered)
     {
         var indent = new string(' ', listDepth * 4);
-        var text = HtmlEntity.DeEntitize(li.InnerText).Trim();
+        var text = GetItemText(li);
 
         // Check for task list (Unicode checkboxes from Loop)
         if (text.StartsWith("☑"))
@@ -207,7 +207,7 @@ public static partial class HtmlToMarkdownConverter
         }
 
         // Handle nested lists
-        foreach (var child in li.ChildNodes.Where(c => c.Name is "ul" or "ol"))
+        foreach (var child in GetNestedLists(li))
         {
             int nestedIdx = 1;
             foreach (var nestedLi in child.ChildNodes.Where(c => c.Name == "li"))
@@ -216,6 +216,59 @@ public static partial class HtmlToMarkdownConverter
             }
         }
     }
+
+    /// <summary>
+    /// Text belonging to the list item itself. Nested lists are excluded because
+    /// they are emitted separately as indented items.
+    /// </summary>
+    private static string GetItemText(HtmlNode li)
+    {
+        var sb = new StringBuilder();
+        AppendTextOutsideNestedLists(li, sb);
+        return HtmlEntity.DeEntitize(sb.ToString()).Trim();
+    }
+
+    private static void AppendTextOutsideNestedLists(HtmlNode node, StringBuilder sb)
+    {
+        foreach (var child in node.ChildNodes)
+        {
+            if (child.NodeType == HtmlNodeType.Text)
+            {
+                sb.Append(child.InnerText);
+            }
+            else if (child.NodeType == HtmlNodeType.Element && !IsList(child))
+            {
+                AppendTextOutsideNestedLists(child, sb);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Nested lists, which may be wrapped in an intermediate element such as a
+    /// div or paragraph. Descends only through non-list elements so each list is
+    /// yielded once, at its outermost position.
+    /// </summary>
+    private static IEnumerable<HtmlNode> GetNestedLists(HtmlNode li)
+    {
+        foreach (var child in li.ChildNodes)
+        {
+            if (child.NodeType != HtmlNodeType.Element)
+                continue;
+
+            if (IsList(child))
+            {
+                yield return child;
+            }
+            else
+            {
+                foreach (var nested in GetNestedLists(child))
+                    yield return nested;
+            }
+        }
+    }
+
+    private static bool IsList(HtmlNode node)
+        => node.Name is "ul" or "ol";
 
     private static void ConvertTable(HtmlNode table, StringBuilder sb)
     {
