@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using Windows.ApplicationModel.DataTransfer;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -77,17 +76,23 @@ public sealed partial class MainPage : Page
         _isReading = true;
         try
         {
-            var snapshot = await ClipboardManager.ReadAsync();
+            var snapshot = await ClipboardManager.TryReadAsync();
 
-            if (snapshot.IsExcluded)
+            if (snapshot is null)
+            {
+                ShowClipboardUnavailable();
+                return;
+            }
+
+            if (snapshot.Value.IsExcluded)
             {
                 ShowClipboardExcluded();
                 return;
             }
 
-            var text = snapshot.Text;
-            var html = snapshot.Html;
-            var rtf = snapshot.Rtf;
+            var text = snapshot.Value.Text;
+            var html = snapshot.Value.Html;
+            var rtf = snapshot.Value.Rtf;
 
             _clipboardText = text;
             _clipboardHtml = html;
@@ -123,14 +128,6 @@ public sealed partial class MainPage : Page
                     ShortcutText.Text = "Copy text or rich text to begin";
                     break;
             }
-        }
-        catch (COMException)
-        {
-            ShowClipboardUnavailable();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            ShowClipboardUnavailable();
         }
         finally
         {
@@ -184,7 +181,7 @@ public sealed partial class MainPage : Page
             ShowFeedback("Clipboard has no convertible content", success: false);
     }
 
-    private void ConvertToRichText()
+    private async void ConvertToRichText()
     {
         if (string.IsNullOrWhiteSpace(_clipboardText))
         {
@@ -192,31 +189,44 @@ public sealed partial class MainPage : Page
             return;
         }
 
-        var html = LoopHtmlConverter.Convert(_clipboardText);
+        string html;
         try
         {
-            ClipboardManager.WriteForLoop(html, _clipboardText);
-            ShowFeedback("Rich text copied - ready for Loop", success: true);
+            html = LoopHtmlConverter.Convert(_clipboardText);
         }
-        catch (COMException)
+        catch (Exception)
         {
-            ShowFeedback("Clipboard is busy. Try again.", success: false);
+            ShowFeedback("Could not convert this content", success: false);
+            return;
         }
+
+        if (await ClipboardManager.TryWriteForLoopAsync(html, _clipboardText))
+            ShowFeedback("Rich text copied - ready for Loop", success: true);
+        else
+            ShowFeedback("Clipboard is busy. Try again.", success: false);
     }
 
-    private void ConvertToMarkdown()
+    private async void ConvertToMarkdown()
     {
         string? markdown = null;
 
-        if (!string.IsNullOrWhiteSpace(_clipboardHtml))
+        try
         {
-            markdown = HtmlToMarkdownConverter.Convert(_clipboardHtml);
-        }
+            if (!string.IsNullOrWhiteSpace(_clipboardHtml))
+            {
+                markdown = HtmlToMarkdownConverter.Convert(_clipboardHtml);
+            }
 
-        if (string.IsNullOrWhiteSpace(markdown) &&
-            RtfToMarkdownConverter.TryConvert(_clipboardRtf, out var rtfMarkdown))
+            if (string.IsNullOrWhiteSpace(markdown) &&
+                RtfToMarkdownConverter.TryConvert(_clipboardRtf, out var rtfMarkdown))
+            {
+                markdown = rtfMarkdown;
+            }
+        }
+        catch (Exception)
         {
-            markdown = rtfMarkdown;
+            ShowFeedback("Could not convert this content", success: false);
+            return;
         }
 
         if (string.IsNullOrWhiteSpace(markdown))
@@ -225,15 +235,10 @@ public sealed partial class MainPage : Page
             return;
         }
 
-        try
-        {
-            ClipboardManager.WriteMarkdown(markdown);
+        if (await ClipboardManager.TryWriteMarkdownAsync(markdown))
             ShowFeedback("Markdown copied", success: true);
-        }
-        catch (COMException)
-        {
+        else
             ShowFeedback("Clipboard is busy. Try again.", success: false);
-        }
     }
 
     private void ShowFeedback(string message, bool success)
