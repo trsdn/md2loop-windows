@@ -103,20 +103,27 @@ public static partial class HtmlToMarkdownConverter
                 break;
 
             case "pre":
-                var codeNode = node.SelectSingleNode("code");
+                // The language hint comes from a descendant <code>, but the whole
+                // subtree is converted so nothing is dropped when the markup is
+                // wrapped, split across several <code> elements, or absent entirely.
+                var codeNode = node.SelectSingleNode(".//code");
                 var lang = "";
                 if (codeNode != null)
                 {
                     var cls = codeNode.GetAttributeValue("class", "");
-                    if (cls.Contains("language-"))
-                    {
-                        var match = Regex.Match(cls, @"language-(\S+)");
-                        if (match.Success) lang = match.Groups[1].Value;
-                    }
+                    var match = LanguageClassRegex().Match(cls);
+                    if (match.Success) lang = match.Groups[1].Value;
                 }
-                sb.Append($"\n```{lang}\n");
-                ConvertChildren(codeNode ?? node, sb, listDepth, 0, true);
-                sb.Append("\n```\n\n");
+
+                var codeBuilder = new StringBuilder();
+                ConvertChildren(node, codeBuilder, listDepth, 0, true);
+                var code = codeBuilder.ToString().Trim('\r', '\n');
+
+                // A fence has to be longer than the longest backtick run it contains.
+                var fence = new string('`', Math.Max(3, LongestBacktickRun(code) + 1));
+                sb.Append($"\n{fence}{lang}\n");
+                sb.Append(code);
+                sb.Append($"\n{fence}\n\n");
                 break;
 
             case "a":
@@ -248,6 +255,27 @@ public static partial class HtmlToMarkdownConverter
     private static string NormalizeSingleLine(string value)
         => CollapseWhitespaceRegex().Replace(value, " ").Trim();
 
+    private static int LongestBacktickRun(string value)
+    {
+        var longest = 0;
+        var current = 0;
+
+        foreach (var c in value)
+        {
+            if (c == '`')
+            {
+                current++;
+                longest = Math.Max(longest, current);
+            }
+            else
+            {
+                current = 0;
+            }
+        }
+
+        return longest;
+    }
+
     /// <summary>
     /// Nested lists, which may be wrapped in an intermediate element such as a
     /// div or paragraph. Descends only through non-list elements so each list is
@@ -326,6 +354,9 @@ public static partial class HtmlToMarkdownConverter
 
     [GeneratedRegex(@"\n{3,}")]
     private static partial Regex CollapseNewlinesRegex();
+
+    [GeneratedRegex(@"language-(\S+)")]
+    private static partial Regex LanguageClassRegex();
 
     [GeneratedRegex(@"[\s]+")]
     private static partial Regex CollapseWhitespaceRegex();
