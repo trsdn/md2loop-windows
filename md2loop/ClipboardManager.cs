@@ -3,13 +3,32 @@ using Windows.ApplicationModel.DataTransfer;
 namespace md2loop;
 
 /// <summary>
+/// A point-in-time view of the clipboard.
+/// </summary>
+public readonly record struct ClipboardSnapshot(string? Text, string? Html, string? Rtf, bool IsExcluded)
+{
+    /// <summary>
+    /// Content the source app asked monitoring tools not to process.
+    /// </summary>
+    public static ClipboardSnapshot Excluded { get; } = new(null, null, null, true);
+}
+
+/// <summary>
 /// Windows clipboard operations for reading and writing HTML/RTF/text content.
 /// </summary>
 public static class ClipboardManager
 {
-    public static async Task<(string? Text, string? Html, string? Rtf)> ReadAsync()
+    // Set by password managers and similar apps to opt out of clipboard monitoring.
+    private const string ExcludeFromMonitoringFormat = "ExcludeClipboardContentFromMonitorProcessing";
+    private const string CanIncludeInHistoryProperty = "CanIncludeInClipboardHistory";
+
+    public static async Task<ClipboardSnapshot> ReadAsync()
     {
         var content = Clipboard.GetContent();
+
+        if (IsExcludedFromMonitoring(content))
+            return ClipboardSnapshot.Excluded;
+
         string? text = null;
         string? html = null;
         string? rtf = null;
@@ -32,7 +51,21 @@ public static class ClipboardManager
             rtf = await content.GetRtfAsync();
         }
 
-        return (text, html, rtf);
+        return new ClipboardSnapshot(text, html, rtf, IsExcluded: false);
+    }
+
+    /// <summary>
+    /// Whether the source app marked the content as private. Such content is not
+    /// read at all, so passwords and similar secrets never enter this process.
+    /// </summary>
+    private static bool IsExcludedFromMonitoring(DataPackageView content)
+    {
+        if (content.Contains(ExcludeFromMonitoringFormat))
+            return true;
+
+        return content.Properties.TryGetValue(CanIncludeInHistoryProperty, out var value)
+            && value is bool canInclude
+            && !canInclude;
     }
 
     /// <summary>
