@@ -98,6 +98,13 @@ Works the other way too — copy rich text from Loop or Office and click **Markd
 
 Contributions are welcome! Please open an issue or PR.
 
+The application icons are generated from `assets/logo.png`. After changing the
+artwork, regenerate `assets/logo.ico` and `md2loop/Assets/AppIcon.ico`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/generate-icons.ps1
+```
+
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
