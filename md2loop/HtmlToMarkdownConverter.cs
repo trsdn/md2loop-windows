@@ -218,30 +218,35 @@ public static partial class HtmlToMarkdownConverter
     }
 
     /// <summary>
-    /// Text belonging to the list item itself. Nested lists are excluded because
-    /// they are emitted separately as indented items.
+    /// Markdown for the list item's own content. Nested lists are excluded
+    /// because they are emitted separately as indented items.
     /// </summary>
     private static string GetItemText(HtmlNode li)
     {
+        // Convert a copy with the nested lists detached so inline elements still
+        // run through the normal conversion pipeline and keep their formatting.
+        var clone = li.Clone();
+        foreach (var nested in GetNestedLists(clone).ToList())
+            nested.Remove();
+
         var sb = new StringBuilder();
-        AppendTextOutsideNestedLists(li, sb);
-        return HtmlEntity.DeEntitize(sb.ToString()).Trim();
+        ConvertChildren(clone, sb, listDepth: 0, orderedIndex: 0, inPre: false);
+        return NormalizeSingleLine(sb.ToString());
     }
 
-    private static void AppendTextOutsideNestedLists(HtmlNode node, StringBuilder sb)
+    /// <summary>
+    /// Markdown for a single table cell, forced onto one line so the pipe table
+    /// stays well formed.
+    /// </summary>
+    private static string GetCellText(HtmlNode cell)
     {
-        foreach (var child in node.ChildNodes)
-        {
-            if (child.NodeType == HtmlNodeType.Text)
-            {
-                sb.Append(child.InnerText);
-            }
-            else if (child.NodeType == HtmlNodeType.Element && !IsList(child))
-            {
-                AppendTextOutsideNestedLists(child, sb);
-            }
-        }
+        var sb = new StringBuilder();
+        ConvertChildren(cell, sb, listDepth: 0, orderedIndex: 0, inPre: false);
+        return NormalizeSingleLine(sb.ToString()).Replace("|", "\\|");
     }
+
+    private static string NormalizeSingleLine(string value)
+        => CollapseWhitespaceRegex().Replace(value, " ").Trim();
 
     /// <summary>
     /// Nested lists, which may be wrapped in an intermediate element such as a
@@ -279,7 +284,7 @@ public static partial class HtmlToMarkdownConverter
         {
             foreach (var tr in thead.SelectNodes("tr") ?? Enumerable.Empty<HtmlNode>())
             {
-                var cells = tr.SelectNodes("th|td")?.Select(c => HtmlEntity.DeEntitize(c.InnerText).Trim()).ToArray();
+                var cells = tr.SelectNodes("th|td")?.Select(GetCellText).ToArray();
                 if (cells != null) rows.Add(cells);
             }
         }
@@ -287,7 +292,7 @@ public static partial class HtmlToMarkdownConverter
         var tbody = table.SelectSingleNode("tbody") ?? table;
         foreach (var tr in tbody.SelectNodes("tr") ?? Enumerable.Empty<HtmlNode>())
         {
-            var cells = tr.SelectNodes("th|td")?.Select(c => HtmlEntity.DeEntitize(c.InnerText).Trim()).ToArray();
+            var cells = tr.SelectNodes("th|td")?.Select(GetCellText).ToArray();
             if (cells is { Length: > 0 }) rows.Add(cells);
         }
 
