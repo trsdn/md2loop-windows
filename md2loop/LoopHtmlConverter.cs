@@ -1,8 +1,7 @@
 using Markdig;
+using Markdig.Extensions.TaskLists;
 using Markdig.Renderers;
 using Markdig.Renderers.Html;
-using Markdig.Syntax;
-using Markdig.Syntax.Inlines;
 
 namespace md2loop;
 
@@ -22,9 +21,6 @@ public static class LoopHtmlConverter
 
         var document = Markdown.Parse(markdown, Pipeline);
 
-        // Transform task list items to use Unicode checkboxes
-        TransformTaskLists(document);
-
         using var writer = new StringWriter();
         var renderer = new HtmlRenderer(writer)
         {
@@ -33,14 +29,15 @@ public static class LoopHtmlConverter
             EnableHtmlForInline = true
         };
         Pipeline.Setup(renderer);
+
+        // Loop does not render <input type="checkbox">, so task list items are
+        // written as Unicode checkboxes instead.
+        renderer.ObjectRenderers.Replace<HtmlTaskListRenderer>(new UnicodeTaskListRenderer());
+
         renderer.Render(document);
         writer.Flush();
 
         var html = writer.ToString();
-
-        // Post-process: replace checkbox inputs with Unicode chars for Loop compatibility
-        html = html.Replace("<input checked=\"\" disabled=\"\" type=\"checkbox\" /> ", "☑ ");
-        html = html.Replace("<input disabled=\"\" type=\"checkbox\" /> ", "☐ ");
 
         // Remove CSS classes that Markdig adds
         html = System.Text.RegularExpressions.Regex.Replace(html, @"\s*class=""[^""]*""", "");
@@ -48,26 +45,11 @@ public static class LoopHtmlConverter
         return html.Trim();
     }
 
-    private static void TransformTaskLists(MarkdownDocument document)
+    private sealed class UnicodeTaskListRenderer : HtmlObjectRenderer<TaskList>
     {
-        foreach (var block in document.Descendants())
+        protected override void Write(HtmlRenderer renderer, TaskList obj)
         {
-            if (block is not ListItemBlock listItem) continue;
-            if (listItem.Count == 0) continue;
-
-            var firstBlock = listItem[0];
-            if (firstBlock is not ParagraphBlock paragraph) continue;
-            if (paragraph.Inline?.FirstChild is not LiteralInline literal) continue;
-
-            var content = literal.Content.ToString();
-            if (content.StartsWith("[x] ") || content.StartsWith("[X] "))
-            {
-                literal.Content = new Markdig.Helpers.StringSlice("☑ " + content[4..]);
-            }
-            else if (content.StartsWith("[ ] "))
-            {
-                literal.Content = new Markdig.Helpers.StringSlice("☐ " + content[4..]);
-            }
+            renderer.Write(obj.Checked ? "☑" : "☐");
         }
     }
 }
