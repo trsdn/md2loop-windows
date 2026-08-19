@@ -21,6 +21,9 @@ jobs:
       - name: Build
         run: dotnet build md2loop/md2loop.csproj -c Release -r win-x64
 
+      - name: Test
+        run: dotnet test tests/md2loop.Tests/md2loop.Tests.csproj -c Release
+
       - name: Publish (x64)
         run: |
           dotnet publish md2loop/md2loop.csproj `
