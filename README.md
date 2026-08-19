@@ -61,6 +61,26 @@ dotnet run
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true -o publish
 ```
 
+### Build the Microsoft Store package (MSIX)
+
+The app builds unpackaged by default, which is what the installer and portable
+ZIP use. Opt into MSIX packaging to produce a Store-submittable package:
+
+```powershell
+dotnet build md2loop\md2loop.csproj -c Release -r win-x64 -p:Platform=x64 -p:WindowsPackageType=MSIX
+```
+
+The `.msix` lands in `md2loop\AppPackages\`. It is built **unsigned on purpose** —
+Microsoft re-signs Store submissions after certification, so no code signing
+certificate is required.
+
+Two things still need a Partner Center account before submission: the `Identity`
+and `PublisherDisplayName` values in `md2loop\Package.appxmanifest` are template
+placeholders and must be replaced with the reserved app identity. Note also that
+in the packaged build "start with Windows" comes from the `windows.startupTask`
+manifest extension rather than the installer's registry key, so users toggle it
+in **Settings → Apps → Startup**.
+
 ## Usage
 
 1. Copy Markdown text to your clipboard
