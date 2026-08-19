@@ -16,8 +16,21 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <WindowsPackageType>None</WindowsPackageType>
+    <!--
+      Unpackaged by default so the Inno Setup installer and portable ZIP keep
+      building exactly as before. Pass -p:WindowsPackageType=MSIX to produce the
+      Store package instead. See issue #42.
+    -->
+    <WindowsPackageType Condition="'$(WindowsPackageType)' == ''">None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+
+  <!-- Store packaging. Submissions are uploaded unsigned; Microsoft re-signs
+       the package after certification, so no signing certificate is needed. -->
+  <PropertyGroup Condition="'$(WindowsPackageType)' == 'MSIX'">
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <AppxBundle>Never</AppxBundle>
   </PropertyGroup>
 
   <ItemGroup>
@@ -77,10 +90,12 @@
   </PropertyGroup>
 
   <!-- Publish Properties -->
+  <!-- Trimming and ReadyToRun apply to the unpackaged single-file build only;
+       an MSIX packages loose files and trimming breaks the packaging layout. -->
   <PropertyGroup>
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
-    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
+    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug' and '$(WindowsPackageType)' == 'None'">True</PublishReadyToRun>
     <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    <PublishTrimmed Condition="'$(Configuration)' != 'Debug' and '$(WindowsPackageType)' == 'None'">True</PublishTrimmed>
   </PropertyGroup>
 </Project>
