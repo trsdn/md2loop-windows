@@ -46,7 +46,7 @@ public static partial class HtmlToMarkdownConverter
             }
             else
             {
-                sb.Append(CollapseWhitespaceRegex().Replace(text, " "));
+                sb.Append(EscapeInline(CollapseWhitespaceRegex().Replace(text, " ")));
             }
             return;
         }
@@ -67,7 +67,9 @@ public static partial class HtmlToMarkdownConverter
                 break;
 
             case "p":
-                ConvertChildren(node, sb, listDepth, 0, false);
+                var paragraph = new StringBuilder();
+                ConvertChildren(node, paragraph, listDepth, 0, false);
+                sb.Append(EscapeLeadingBlockMarker(paragraph.ToString()));
                 sb.Append("\n\n");
                 break;
 
@@ -96,9 +98,15 @@ public static partial class HtmlToMarkdownConverter
                 }
                 else
                 {
-                    sb.Append('`');
-                    sb.Append(HtmlEntity.DeEntitize(node.InnerText));
-                    sb.Append('`');
+                    // The delimiter has to be longer than any backtick run inside.
+                    var inlineCode = HtmlEntity.DeEntitize(node.InnerText);
+                    var delimiter = new string('`', LongestBacktickRun(inlineCode) + 1);
+                    var padding = inlineCode.StartsWith('`') || inlineCode.EndsWith('`') ? " " : "";
+                    sb.Append(delimiter);
+                    sb.Append(padding);
+                    sb.Append(inlineCode);
+                    sb.Append(padding);
+                    sb.Append(delimiter);
                 }
                 break;
 
@@ -238,7 +246,7 @@ public static partial class HtmlToMarkdownConverter
 
         var sb = new StringBuilder();
         ConvertChildren(clone, sb, listDepth: 0, orderedIndex: 0, inPre: false);
-        return NormalizeSingleLine(sb.ToString());
+        return EscapeLeadingBlockMarker(NormalizeSingleLine(sb.ToString()));
     }
 
     /// <summary>
@@ -254,6 +262,71 @@ public static partial class HtmlToMarkdownConverter
 
     private static string NormalizeSingleLine(string value)
         => CollapseWhitespaceRegex().Replace(value, " ").Trim();
+
+    /// <summary>
+    /// Escapes characters in a text node that would otherwise be re-read as
+    /// inline Markdown syntax. Underscores are only escaped at word boundaries,
+    /// so identifiers such as file_name_here stay readable.
+    /// </summary>
+    private static string EscapeInline(string text)
+    {
+        if (text.Length == 0)
+            return text;
+
+        var sb = new StringBuilder(text.Length);
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+
+            switch (c)
+            {
+                case '\\' or '`' or '*' or '[' or ']':
+                    sb.Append('\\').Append(c);
+                    break;
+
+                case '_' when IsWordBoundary(text, i):
+                    sb.Append("\\_");
+                    break;
+
+                case '~' when i + 1 < text.Length && text[i + 1] == '~':
+                    sb.Append("\\~\\~");
+                    i++;
+                    break;
+
+                default:
+                    sb.Append(c);
+                    break;
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private static bool IsWordBoundary(string text, int index)
+    {
+        var before = index > 0 && char.IsLetterOrDigit(text[index - 1]);
+        var after = index + 1 < text.Length && char.IsLetterOrDigit(text[index + 1]);
+        return !before || !after;
+    }
+
+    /// <summary>
+    /// Escapes a leading character that would turn a paragraph into a heading,
+    /// list item, blockquote or thematic break.
+    /// </summary>
+    private static string EscapeLeadingBlockMarker(string text)
+    {
+        var match = LeadingBlockMarkerRegex().Match(text);
+        if (!match.Success)
+            return text;
+
+        // An ordered marker is neutralised on its delimiter ("1\." ), because a
+        // backslash before a digit is not an escape sequence and would render.
+        var punct = match.Groups["punct"];
+        var escapeAt = punct.Success ? punct.Index : match.Groups["marker"].Index;
+
+        return string.Concat(text.AsSpan(0, escapeAt), "\\", text.AsSpan(escapeAt));
+    }
 
     private static int LongestBacktickRun(string value)
     {
@@ -357,6 +430,9 @@ public static partial class HtmlToMarkdownConverter
 
     [GeneratedRegex(@"language-(\S+)")]
     private static partial Regex LanguageClassRegex();
+
+    [GeneratedRegex(@"^\s{0,3}(?:\d+(?<punct>[.)])(?=\s|$)|(?<marker>#{1,6}(?=\s|$)|>|[-+](?=\s|$)|-{3,}\s*$|={3,}\s*$))")]
+    private static partial Regex LeadingBlockMarkerRegex();
 
     [GeneratedRegex(@"[\s]+")]
     private static partial Regex CollapseWhitespaceRegex();
