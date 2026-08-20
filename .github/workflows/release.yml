@@ -70,7 +70,7 @@ jobs:
           Compress-Archive -Path publish/* -DestinationPath dist/md2loop-${{ matrix.rid }}.zip
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: md2loop-${{ matrix.rid }}
           path: |
