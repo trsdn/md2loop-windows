@@ -56,14 +56,6 @@ public class RoundTripTests
     }
 
     [Fact]
-    public void FencedCode_SurvivesARoundTrip_ExceptTheLanguage()
-    {
-        // The blanket class-stripping regex removes the language-* class that
-        // carries the code language, so the fence comes back bare. Tracked as #34.
-        Assert.Equal("```\nvar x = 1;\n```", RoundTrip("```csharp\nvar x = 1;\n```"));
-    }
-
-    [Fact(Skip = "Known bug #34: class stripping removes language-* from code blocks.")]
     public void FencedCode_KeepsItsLanguage()
     {
         Assert.Equal("```csharp\nvar x = 1;\n```", RoundTrip("```csharp\nvar x = 1;\n```"));
