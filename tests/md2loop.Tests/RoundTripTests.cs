@@ -91,7 +91,7 @@ public class RoundTripTests
     // The remaining cases are known open bugs. They are kept here so the expected
     // behaviour is written down and the tests start passing when the bugs are fixed.
 
-    [Fact(Skip = "Known bug #32: no blank line after a list, so the next block is swallowed into it.")]
+    [Fact]
     public void ParagraphAfterAList_StaysASeparateBlock()
     {
         Assert.Equal("- one\n- two\n\nAfter the list.", RoundTrip("- one\n- two\n\nAfter the list."));

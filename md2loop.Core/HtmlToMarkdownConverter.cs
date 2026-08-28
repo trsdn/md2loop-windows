@@ -162,6 +162,7 @@ public static partial class HtmlToMarkdownConverter
                     int dummy = 0;
                     ConvertListItem(li, sb, listDepth, ref dummy, ordered: false);
                 }
+                EndList(node, sb);
                 break;
 
             case "ol":
@@ -170,6 +171,7 @@ public static partial class HtmlToMarkdownConverter
                 {
                     ConvertListItem(li, sb, listDepth, ref olIdx, ordered: true);
                 }
+                EndList(node, sb);
                 break;
 
             case "table":
@@ -384,6 +386,25 @@ public static partial class HtmlToMarkdownConverter
 
     private static bool IsList(HtmlNode node)
         => node.Name is "ul" or "ol";
+
+    /// <summary>
+    /// Separates a list from whatever follows it. Without the blank line the next
+    /// paragraph is a lazy continuation of the final list item, so it gets pulled
+    /// into the list when the Markdown is parsed again.
+    /// </summary>
+    private static void EndList(HtmlNode list, StringBuilder sb)
+    {
+        // A list inside a list item is rendered as further indented items of the
+        // same list, so it must not be broken apart.
+        for (var ancestor = list.ParentNode; ancestor != null; ancestor = ancestor.ParentNode)
+        {
+            if (ancestor.Name == "li")
+                return;
+        }
+
+        if (sb.Length > 0 && sb[^1] == '\n')
+            sb.Append('\n');
+    }
 
     private static void ConvertTable(HtmlNode table, StringBuilder sb)
     {
