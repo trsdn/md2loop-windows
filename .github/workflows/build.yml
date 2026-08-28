@@ -11,15 +11,18 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
 
       - name: Build
         run: dotnet build md2loop/md2loop.csproj -c Release -r win-x64
+
+      - name: Test
+        run: dotnet test tests/md2loop.Tests/md2loop.Tests.csproj -c Release
 
       - name: Publish (x64)
         run: |

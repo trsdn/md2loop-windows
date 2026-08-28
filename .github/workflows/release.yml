@@ -21,10 +21,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
 
@@ -67,14 +67,19 @@ jobs:
 
       - name: Create portable ZIP
         run: |
-          Compress-Archive -Path publish/* -DestinationPath dist/md2loop-${{ matrix.rid }}.zip
+          # The installer step happens to create dist/ via the .iss OutputDir, but
+          # relying on that would break this step the moment the installer is
+          # skipped or reordered.
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          $version = "${{ steps.version.outputs.VERSION }}"
+          Compress-Archive -Path publish/* -DestinationPath "dist/md2loop-$version-${{ matrix.rid }}.zip"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: md2loop-${{ matrix.rid }}
           path: |
-            dist/md2loop-${{ matrix.rid }}.zip
+            dist/md2loop-*.zip
             dist/md2loop-setup-*.exe
 
   release:
@@ -83,12 +88,12 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           files: |
