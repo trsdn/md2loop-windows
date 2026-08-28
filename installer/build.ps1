@@ -73,7 +73,7 @@ if (-not (Test-Path $iscc)) {
 }
 
 # Also create portable ZIP
-$zipPath = "$distDir\md2loop-win-$Architecture-v$Version.zip"
+$zipPath = "$distDir\md2loop-$Version-win-$Architecture.zip"
 Compress-Archive -Path "$publishDir\*" -DestinationPath $zipPath
 Write-Host ""
 Write-Host "✅ Build complete!" -ForegroundColor Green
