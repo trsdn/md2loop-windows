@@ -33,3 +33,21 @@ jobs:
             -p:PublishSingleFile=true `
             -p:PublishTrimmed=true `
             -o publish/win-x64
+
+      # Guards the Microsoft Store packaging path (issue #42). The default build
+      # above stays unpackaged; this proves the MSIX variant still packages.
+      # Unsigned on purpose: Microsoft re-signs Store submissions after certification.
+      - name: Build MSIX package (Store)
+        run: |
+          dotnet build md2loop/md2loop.csproj `
+            -c Release `
+            -r win-x64 `
+            -p:Platform=x64 `
+            -p:WindowsPackageType=MSIX
+
+      - name: Upload MSIX
+        uses: actions/upload-artifact@v7
+        with:
+          name: md2loop-msix-x64
+          path: md2loop/AppPackages/**/*.msix
+          if-no-files-found: error
