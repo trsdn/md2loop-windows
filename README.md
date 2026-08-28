@@ -41,8 +41,8 @@ Grab the latest release from the [Releases page](https://github.com/trsdn/md2loo
 |------|-------------|
 | `md2loop-setup-x.y.z-win-x64.exe` | **Installer** — Intel/AMD 64-bit |
 | `md2loop-setup-x.y.z-win-arm64.exe` | **Installer** — ARM64 (Surface Pro, Snapdragon) |
-| `md2loop-win-x64.zip` | Portable ZIP (Intel/AMD 64-bit) |
-| `md2loop-win-arm64.zip` | Portable ZIP (ARM64 — Surface Pro, Snapdragon) |
+| `md2loop-x.y.z-win-x64.zip` | Portable ZIP (Intel/AMD 64-bit) |
+| `md2loop-x.y.z-win-arm64.zip` | Portable ZIP (ARM64 — Surface Pro, Snapdragon) |
 
 The installer handles everything — just run it. No .NET runtime needed.
 
