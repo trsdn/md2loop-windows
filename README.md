@@ -98,6 +98,22 @@ Works the other way too — copy rich text from Loop or Office and click **Markd
 
 Contributions are welcome! Please open an issue or PR.
 
+### Project layout
+
+| Project | Purpose |
+| --- | --- |
+| `md2loop` | WinUI 3 app: window, clipboard access, UI |
+| `md2loop.Core` | Conversion logic, with no UI or clipboard dependencies |
+| `tests/md2loop.Tests` | Unit tests for `md2loop.Core` |
+
+### Running the tests
+
+```powershell
+dotnet test tests/md2loop.Tests/md2loop.Tests.csproj
+```
+
+### Regenerating the icons
+
 The application icons are generated from `assets/logo.png`. After changing the
 artwork, regenerate `assets/logo.ico` and `md2loop/Assets/AppIcon.ico`:
 

@@ -65,8 +65,6 @@ public static partial class ClipboardContentDetector
             return 0;
 
         var trimmed = text.Trim();
-        if (ContainsHTML(trimmed))
-            return 0;
 
         var lines = trimmed.ReplaceLineEndings("\n").Split('\n');
         var score = 0;
@@ -87,7 +85,22 @@ public static partial class ClipboardContentDetector
         if (ItalicRegex().IsMatch(trimmed)) score += 3;
         if (StrikethroughRegex().IsMatch(trimmed)) score += 3;
 
+        // Markdown may legitimately embed raw HTML, and technical writing often
+        // mentions tags inside code. Only markup outside code counts against the
+        // text, and it weighs against the other signals rather than vetoing them.
+        if (ContainsHTML(RemoveCode(trimmed))) score -= 6;
+
         return score;
+    }
+
+    /// <summary>
+    /// Strips fenced blocks and inline code spans, where angle brackets are
+    /// content rather than markup.
+    /// </summary>
+    private static string RemoveCode(string text)
+    {
+        var withoutFences = FencedBlockRegex().Replace(text, "\n");
+        return InlineCodeRegex().Replace(withoutFences, " ");
     }
 
     private static int GetRichTextScore(string html)
@@ -167,6 +180,9 @@ public static partial class ClipboardContentDetector
 
     [GeneratedRegex(@"`[^`\n]+`")]
     private static partial Regex InlineCodeRegex();
+
+    [GeneratedRegex(@"(```|~~~)[\s\S]*?\1")]
+    private static partial Regex FencedBlockRegex();
 
     [GeneratedRegex(@"(\*\*|__)(?=\S)(.+?)(?<=\S)\1")]
     private static partial Regex BoldRegex();

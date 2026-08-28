@@ -44,9 +44,18 @@ public static partial class HtmlToMarkdownConverter
             {
                 sb.Append(text);
             }
+            else if (text.AsSpan().IsWhiteSpace())
+            {
+                // Whitespace between block elements is layout, not content. A block
+                // ends with a newline, so a whitespace-only node there would become
+                // a stray leading space on the next block. Between inline elements
+                // the same node is a real word separator and has to be kept.
+                if (sb.Length > 0 && sb[^1] != '\n')
+                    sb.Append(' ');
+            }
             else
             {
-                sb.Append(CollapseWhitespaceRegex().Replace(text, " "));
+                sb.Append(EscapeInline(CollapseWhitespaceRegex().Replace(text, " ")));
             }
             return;
         }
@@ -67,7 +76,9 @@ public static partial class HtmlToMarkdownConverter
                 break;
 
             case "p":
-                ConvertChildren(node, sb, listDepth, 0, false);
+                var paragraph = new StringBuilder();
+                ConvertChildren(node, paragraph, listDepth, 0, false);
+                sb.Append(EscapeLeadingBlockMarker(paragraph.ToString()));
                 sb.Append("\n\n");
                 break;
 
@@ -96,27 +107,40 @@ public static partial class HtmlToMarkdownConverter
                 }
                 else
                 {
-                    sb.Append('`');
-                    sb.Append(HtmlEntity.DeEntitize(node.InnerText));
-                    sb.Append('`');
+                    // The delimiter has to be longer than any backtick run inside.
+                    var inlineCode = HtmlEntity.DeEntitize(node.InnerText);
+                    var delimiter = new string('`', LongestBacktickRun(inlineCode) + 1);
+                    var padding = inlineCode.StartsWith('`') || inlineCode.EndsWith('`') ? " " : "";
+                    sb.Append(delimiter);
+                    sb.Append(padding);
+                    sb.Append(inlineCode);
+                    sb.Append(padding);
+                    sb.Append(delimiter);
                 }
                 break;
 
             case "pre":
-                var codeNode = node.SelectSingleNode("code");
+                // The language hint comes from a descendant <code>, but the whole
+                // subtree is converted so nothing is dropped when the markup is
+                // wrapped, split across several <code> elements, or absent entirely.
+                var codeNode = node.SelectSingleNode(".//code");
                 var lang = "";
                 if (codeNode != null)
                 {
                     var cls = codeNode.GetAttributeValue("class", "");
-                    if (cls.Contains("language-"))
-                    {
-                        var match = Regex.Match(cls, @"language-(\S+)");
-                        if (match.Success) lang = match.Groups[1].Value;
-                    }
+                    var match = LanguageClassRegex().Match(cls);
+                    if (match.Success) lang = match.Groups[1].Value;
                 }
-                sb.Append($"\n```{lang}\n");
-                ConvertChildren(codeNode ?? node, sb, listDepth, 0, true);
-                sb.Append("\n```\n\n");
+
+                var codeBuilder = new StringBuilder();
+                ConvertChildren(node, codeBuilder, listDepth, 0, true);
+                var code = codeBuilder.ToString().Trim('\r', '\n');
+
+                // A fence has to be longer than the longest backtick run it contains.
+                var fence = new string('`', Math.Max(3, LongestBacktickRun(code) + 1));
+                sb.Append($"\n{fence}{lang}\n");
+                sb.Append(code);
+                sb.Append($"\n{fence}\n\n");
                 break;
 
             case "a":
@@ -138,6 +162,7 @@ public static partial class HtmlToMarkdownConverter
                     int dummy = 0;
                     ConvertListItem(li, sb, listDepth, ref dummy, ordered: false);
                 }
+                EndList(node, sb);
                 break;
 
             case "ol":
@@ -146,6 +171,7 @@ public static partial class HtmlToMarkdownConverter
                 {
                     ConvertListItem(li, sb, listDepth, ref olIdx, ordered: true);
                 }
+                EndList(node, sb);
                 break;
 
             case "table":
@@ -218,29 +244,120 @@ public static partial class HtmlToMarkdownConverter
     }
 
     /// <summary>
-    /// Text belonging to the list item itself. Nested lists are excluded because
-    /// they are emitted separately as indented items.
+    /// Markdown for the list item's own content. Nested lists are excluded
+    /// because they are emitted separately as indented items.
     /// </summary>
     private static string GetItemText(HtmlNode li)
     {
+        // Convert a copy with the nested lists detached so inline elements still
+        // run through the normal conversion pipeline and keep their formatting.
+        var clone = li.Clone();
+        foreach (var nested in GetNestedLists(clone).ToList())
+            nested.Remove();
+
         var sb = new StringBuilder();
-        AppendTextOutsideNestedLists(li, sb);
-        return HtmlEntity.DeEntitize(sb.ToString()).Trim();
+        ConvertChildren(clone, sb, listDepth: 0, orderedIndex: 0, inPre: false);
+        return EscapeLeadingBlockMarker(NormalizeSingleLine(sb.ToString()));
     }
 
-    private static void AppendTextOutsideNestedLists(HtmlNode node, StringBuilder sb)
+    /// <summary>
+    /// Markdown for a single table cell, forced onto one line so the pipe table
+    /// stays well formed.
+    /// </summary>
+    private static string GetCellText(HtmlNode cell)
     {
-        foreach (var child in node.ChildNodes)
+        var sb = new StringBuilder();
+        ConvertChildren(cell, sb, listDepth: 0, orderedIndex: 0, inPre: false);
+        return NormalizeSingleLine(sb.ToString()).Replace("|", "\\|");
+    }
+
+    private static string NormalizeSingleLine(string value)
+        => CollapseWhitespaceRegex().Replace(value, " ").Trim();
+
+    /// <summary>
+    /// Escapes characters in a text node that would otherwise be re-read as
+    /// inline Markdown syntax. Underscores are only escaped at word boundaries,
+    /// so identifiers such as file_name_here stay readable.
+    /// </summary>
+    private static string EscapeInline(string text)
+    {
+        if (text.Length == 0)
+            return text;
+
+        var sb = new StringBuilder(text.Length);
+
+        for (var i = 0; i < text.Length; i++)
         {
-            if (child.NodeType == HtmlNodeType.Text)
+            var c = text[i];
+
+            switch (c)
             {
-                sb.Append(child.InnerText);
-            }
-            else if (child.NodeType == HtmlNodeType.Element && !IsList(child))
-            {
-                AppendTextOutsideNestedLists(child, sb);
+                case '\\' or '`' or '*' or '[' or ']':
+                    sb.Append('\\').Append(c);
+                    break;
+
+                case '_' when IsWordBoundary(text, i):
+                    sb.Append("\\_");
+                    break;
+
+                case '~' when i + 1 < text.Length && text[i + 1] == '~':
+                    sb.Append("\\~\\~");
+                    i++;
+                    break;
+
+                default:
+                    sb.Append(c);
+                    break;
             }
         }
+
+        return sb.ToString();
+    }
+
+    private static bool IsWordBoundary(string text, int index)
+    {
+        var before = index > 0 && char.IsLetterOrDigit(text[index - 1]);
+        var after = index + 1 < text.Length && char.IsLetterOrDigit(text[index + 1]);
+        return !before || !after;
+    }
+
+    /// <summary>
+    /// Escapes a leading character that would turn a paragraph into a heading,
+    /// list item, blockquote or thematic break.
+    /// </summary>
+    private static string EscapeLeadingBlockMarker(string text)
+    {
+        var match = LeadingBlockMarkerRegex().Match(text);
+        if (!match.Success)
+            return text;
+
+        // An ordered marker is neutralised on its delimiter ("1\." ), because a
+        // backslash before a digit is not an escape sequence and would render.
+        var punct = match.Groups["punct"];
+        var escapeAt = punct.Success ? punct.Index : match.Groups["marker"].Index;
+
+        return string.Concat(text.AsSpan(0, escapeAt), "\\", text.AsSpan(escapeAt));
+    }
+
+    private static int LongestBacktickRun(string value)
+    {
+        var longest = 0;
+        var current = 0;
+
+        foreach (var c in value)
+        {
+            if (c == '`')
+            {
+                current++;
+                longest = Math.Max(longest, current);
+            }
+            else
+            {
+                current = 0;
+            }
+        }
+
+        return longest;
     }
 
     /// <summary>
@@ -270,6 +387,25 @@ public static partial class HtmlToMarkdownConverter
     private static bool IsList(HtmlNode node)
         => node.Name is "ul" or "ol";
 
+    /// <summary>
+    /// Separates a list from whatever follows it. Without the blank line the next
+    /// paragraph is a lazy continuation of the final list item, so it gets pulled
+    /// into the list when the Markdown is parsed again.
+    /// </summary>
+    private static void EndList(HtmlNode list, StringBuilder sb)
+    {
+        // A list inside a list item is rendered as further indented items of the
+        // same list, so it must not be broken apart.
+        for (var ancestor = list.ParentNode; ancestor != null; ancestor = ancestor.ParentNode)
+        {
+            if (ancestor.Name == "li")
+                return;
+        }
+
+        if (sb.Length > 0 && sb[^1] == '\n')
+            sb.Append('\n');
+    }
+
     private static void ConvertTable(HtmlNode table, StringBuilder sb)
     {
         var rows = new List<string[]>();
@@ -279,7 +415,7 @@ public static partial class HtmlToMarkdownConverter
         {
             foreach (var tr in thead.SelectNodes("tr") ?? Enumerable.Empty<HtmlNode>())
             {
-                var cells = tr.SelectNodes("th|td")?.Select(c => HtmlEntity.DeEntitize(c.InnerText).Trim()).ToArray();
+                var cells = tr.SelectNodes("th|td")?.Select(GetCellText).ToArray();
                 if (cells != null) rows.Add(cells);
             }
         }
@@ -287,7 +423,7 @@ public static partial class HtmlToMarkdownConverter
         var tbody = table.SelectSingleNode("tbody") ?? table;
         foreach (var tr in tbody.SelectNodes("tr") ?? Enumerable.Empty<HtmlNode>())
         {
-            var cells = tr.SelectNodes("th|td")?.Select(c => HtmlEntity.DeEntitize(c.InnerText).Trim()).ToArray();
+            var cells = tr.SelectNodes("th|td")?.Select(GetCellText).ToArray();
             if (cells is { Length: > 0 }) rows.Add(cells);
         }
 
@@ -321,6 +457,12 @@ public static partial class HtmlToMarkdownConverter
 
     [GeneratedRegex(@"\n{3,}")]
     private static partial Regex CollapseNewlinesRegex();
+
+    [GeneratedRegex(@"language-(\S+)")]
+    private static partial Regex LanguageClassRegex();
+
+    [GeneratedRegex(@"^\s{0,3}(?:\d+(?<punct>[.)])(?=\s|$)|(?<marker>#{1,6}(?=\s|$)|>|[-+](?=\s|$)|-{3,}\s*$|={3,}\s*$))")]
+    private static partial Regex LeadingBlockMarkerRegex();
 
     [GeneratedRegex(@"[\s]+")]
     private static partial Regex CollapseWhitespaceRegex();
