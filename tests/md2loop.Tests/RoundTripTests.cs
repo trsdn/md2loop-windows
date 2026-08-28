@@ -97,7 +97,7 @@ public class RoundTripTests
         Assert.Equal("- one\n- two\n\nAfter the list.", RoundTrip("- one\n- two\n\nAfter the list."));
     }
 
-    [Fact(Skip = "Known bug #33: whitespace between block elements leaks a leading space into the next block.")]
+    [Fact]
     public void WhitespaceBetweenBlocks_DoesNotIndentTheNextBlock()
     {
         Assert.Equal("one\n\ntwo", HtmlToMarkdownConverter.Convert("<p>one</p>\n<p>two</p>").Replace("\r\n", "\n"));

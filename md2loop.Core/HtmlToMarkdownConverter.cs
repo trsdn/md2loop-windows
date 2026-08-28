@@ -44,6 +44,15 @@ public static partial class HtmlToMarkdownConverter
             {
                 sb.Append(text);
             }
+            else if (text.AsSpan().IsWhiteSpace())
+            {
+                // Whitespace between block elements is layout, not content. A block
+                // ends with a newline, so a whitespace-only node there would become
+                // a stray leading space on the next block. Between inline elements
+                // the same node is a real word separator and has to be kept.
+                if (sb.Length > 0 && sb[^1] != '\n')
+                    sb.Append(' ');
+            }
             else
             {
                 sb.Append(EscapeInline(CollapseWhitespaceRegex().Replace(text, " ")));
