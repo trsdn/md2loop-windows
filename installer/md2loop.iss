@@ -56,12 +56,10 @@ Name: "startupentry"; Description: "Start md2loop with Windows"; GroupDescriptio
 
 [Files]
 Source: "..\publish\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\publish\*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "..\publish\*.pri"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "..\publish\*.winmd"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "..\publish\*.json"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "..\publish\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion skipifsourcedoesntexist recursesubdirs
-Source: "..\publish\**"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist recursesubdirs createallsubdirs; Excludes: "{#MyAppExeName}"
+; Catch-all for everything else a publish can produce (WinAppSDK native DLLs,
+; resources.pri, Assets\). A single-file publish leaves nothing but the exe and
+; the symbols behind, so this must tolerate matching no files at all.
+Source: "..\publish\**"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist recursesubdirs createallsubdirs; Excludes: "{#MyAppExeName},*.pdb"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

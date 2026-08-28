@@ -37,6 +37,15 @@ public sealed partial class MainWindow : Window
 
         RootFrame.Navigate(typeof(MainPage));
 
+        Activated += (_, args) =>
+        {
+            if (args.WindowActivationState != WindowActivationState.Deactivated &&
+                RootFrame.Content is MainPage page)
+            {
+                page.OnWindowActivated();
+            }
+        };
+
         RootFrame.Loaded += (_, _) =>
         {
             // The rasterization scale is only trustworthy once the XAML tree is live;

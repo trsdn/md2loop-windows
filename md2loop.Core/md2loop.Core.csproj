@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The conversion logic lives here rather than in the app project so it can be
+    referenced by unit tests. Nothing in this assembly touches WinUI or the
+    clipboard, so it builds and runs as plain .NET.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>md2loop</RootNamespace>
+    <AssemblyName>md2loop.Core</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.38.0" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
+    <PackageReference Include="RtfPipe" Version="2.0.7677.4303" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

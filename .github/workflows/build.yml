@@ -12,20 +12,27 @@ jobs:
       # An ARM64 break should not hide the x64 result, and vice versa.
       fail-fast: false
       matrix:
-        rid: [win-x64, win-arm64]
+        include:
+          - rid: win-x64
+            platform: x64
+          - rid: win-arm64
+            platform: arm64
 
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
 
       - name: Build
         run: dotnet build md2loop/md2loop.csproj -c Release -r ${{ matrix.rid }}
+
+      - name: Test
+        run: dotnet test tests/md2loop.Tests/md2loop.Tests.csproj -c Release
 
       # Deliberately identical to release.yml and installer/build.ps1 so CI
       # validates what actually ships. IncludeNativeLibrariesForSelfExtract in
@@ -42,9 +49,28 @@ jobs:
             -o publish/${{ matrix.rid }}
 
       - name: Upload publish output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: md2loop-${{ matrix.rid }}-ci
           path: publish/${{ matrix.rid }}
+          if-no-files-found: error
+          retention-days: 7
+
+      # Guards the Microsoft Store packaging path (issue #42). The default build
+      # above stays unpackaged; this proves the MSIX variant still packages.
+      # Unsigned on purpose: Microsoft re-signs Store submissions after certification.
+      - name: Build MSIX package (Store)
+        run: |
+          dotnet build md2loop/md2loop.csproj `
+            -c Release `
+            -r ${{ matrix.rid }} `
+            -p:Platform=${{ matrix.platform }} `
+            -p:WindowsPackageType=MSIX
+
+      - name: Upload MSIX
+        uses: actions/upload-artifact@v7
+        with:
+          name: md2loop-msix-${{ matrix.platform }}
+          path: md2loop/AppPackages/**/*.msix
           if-no-files-found: error
           retention-days: 7

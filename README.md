@@ -41,8 +41,8 @@ Grab the latest release from the [Releases page](https://github.com/trsdn/md2loo
 |------|-------------|
 | `md2loop-setup-x.y.z-win-x64.exe` | **Installer** — Intel/AMD 64-bit |
 | `md2loop-setup-x.y.z-win-arm64.exe` | **Installer** — ARM64 (Surface Pro, Snapdragon) |
-| `md2loop-win-x64.zip` | Portable ZIP (Intel/AMD 64-bit) |
-| `md2loop-win-arm64.zip` | Portable ZIP (ARM64 — Surface Pro, Snapdragon) |
+| `md2loop-x.y.z-win-x64.zip` | Portable ZIP (Intel/AMD 64-bit) |
+| `md2loop-x.y.z-win-arm64.zip` | Portable ZIP (ARM64 — Surface Pro, Snapdragon) |
 
 The installer handles everything — just run it. No .NET runtime needed.
 
@@ -97,6 +97,22 @@ Works the other way too — copy rich text from Loop or Office and click **Markd
 ## Contributing
 
 Contributions are welcome! Please open an issue or PR.
+
+### Project layout
+
+| Project | Purpose |
+| --- | --- |
+| `md2loop` | WinUI 3 app: window, clipboard access, UI |
+| `md2loop.Core` | Conversion logic, with no UI or clipboard dependencies |
+| `tests/md2loop.Tests` | Unit tests for `md2loop.Core` |
+
+### Running the tests
+
+```powershell
+dotnet test tests/md2loop.Tests/md2loop.Tests.csproj
+```
+
+### Regenerating the icons
 
 The application icons are generated from `assets/logo.png`. After changing the
 artwork, regenerate `assets/logo.ico` and `md2loop/Assets/AppIcon.ico`:
