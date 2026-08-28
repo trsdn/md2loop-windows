@@ -8,6 +8,16 @@ on:
 
 jobs:
   build:
+    strategy:
+      # An ARM64 break should not hide the x64 result, and vice versa.
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            platform: x64
+          - rid: win-arm64
+            platform: arm64
+
     runs-on: windows-latest
 
     steps:
@@ -19,20 +29,32 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Build
-        run: dotnet build md2loop/md2loop.csproj -c Release -r win-x64
+        run: dotnet build md2loop/md2loop.csproj -c Release -r ${{ matrix.rid }}
 
       - name: Test
         run: dotnet test tests/md2loop.Tests/md2loop.Tests.csproj -c Release
 
-      - name: Publish (x64)
+      # Deliberately identical to release.yml and installer/build.ps1 so CI
+      # validates what actually ships. IncludeNativeLibrariesForSelfExtract in
+      # particular changes what ends up inside the single file.
+      - name: Publish
         run: |
           dotnet publish md2loop/md2loop.csproj `
             -c Release `
-            -r win-x64 `
+            -r ${{ matrix.rid }} `
             --self-contained true `
             -p:PublishSingleFile=true `
             -p:PublishTrimmed=true `
-            -o publish/win-x64
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o publish/${{ matrix.rid }}
+
+      - name: Upload publish output
+        uses: actions/upload-artifact@v7
+        with:
+          name: md2loop-${{ matrix.rid }}-ci
+          path: publish/${{ matrix.rid }}
+          if-no-files-found: error
+          retention-days: 7
 
       # Guards the Microsoft Store packaging path (issue #42). The default build
       # above stays unpackaged; this proves the MSIX variant still packages.
@@ -41,13 +63,14 @@ jobs:
         run: |
           dotnet build md2loop/md2loop.csproj `
             -c Release `
-            -r win-x64 `
-            -p:Platform=x64 `
+            -r ${{ matrix.rid }} `
+            -p:Platform=${{ matrix.platform }} `
             -p:WindowsPackageType=MSIX
 
       - name: Upload MSIX
         uses: actions/upload-artifact@v7
         with:
-          name: md2loop-msix-x64
+          name: md2loop-msix-${{ matrix.platform }}
           path: md2loop/AppPackages/**/*.msix
           if-no-files-found: error
+          retention-days: 7
