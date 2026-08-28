@@ -2,13 +2,14 @@ using Markdig;
 using Markdig.Extensions.TaskLists;
 using Markdig.Renderers;
 using Markdig.Renderers.Html;
+using System.Text.RegularExpressions;
 
 namespace md2loop;
 
 /// <summary>
 /// Converts Markdown to Loop-optimized HTML (minimal, no CSS classes, Unicode checkboxes).
 /// </summary>
-public static class LoopHtmlConverter
+public static partial class LoopHtmlConverter
 {
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
@@ -39,11 +40,16 @@ public static class LoopHtmlConverter
 
         var html = writer.ToString();
 
-        // Remove CSS classes that Markdig adds
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\s*class=""[^""]*""", "");
+        // Remove the CSS classes Markdig adds, except the language-* hint on
+        // fenced code blocks: that is the only record of the code language, and
+        // dropping it means a round-trip back to Markdown loses it.
+        html = NonLanguageClassRegex().Replace(html, "");
 
         return html.Trim();
     }
+
+    [GeneratedRegex(@"\s*class=""(?!language-)[^""]*""")]
+    private static partial Regex NonLanguageClassRegex();
 
     private sealed class UnicodeTaskListRenderer : HtmlObjectRenderer<TaskList>
     {

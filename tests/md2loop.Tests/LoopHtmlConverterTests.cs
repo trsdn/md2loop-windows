@@ -40,12 +40,24 @@ public class LoopHtmlConverterTests
         Assert.Contains("<th>a</th>", html);
     }
 
+    // Regression tests for #34. The class-stripping regex used to be blanket and
+    // removed language-*, which is the only record of a code block's language.
     [Fact]
-    public void Convert_StripsCssClasses()
+    public void Convert_KeepsTheCodeLanguageClass()
     {
         var html = LoopHtmlConverter.Convert("```csharp\nvar x = 1;\n```");
 
-        Assert.DoesNotContain("class=", html);
+        Assert.Contains("class=\"language-csharp\"", html);
+    }
+
+    [Fact]
+    public void Convert_StripsNonLanguageCssClasses()
+    {
+        // A custom container renders <div class="warning">, which Loop cannot use.
+        var html = LoopHtmlConverter.Convert(":::warning\nheads up\n:::");
+
+        Assert.DoesNotContain("class=\"warning\"", html);
+        Assert.Contains("heads up", html);
     }
 
     // Regression tests for #21. Markdig renders task lists as <input type="checkbox">,
