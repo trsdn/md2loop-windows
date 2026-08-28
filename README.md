@@ -112,6 +112,15 @@ Contributions are welcome! Please open an issue or PR.
 dotnet test tests/md2loop.Tests/md2loop.Tests.csproj
 ```
 
+### Regenerating the icons
+
+The application icons are generated from `assets/logo.png`. After changing the
+artwork, regenerate `assets/logo.ico` and `md2loop/Assets/AppIcon.ico`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/generate-icons.ps1
+```
+
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
